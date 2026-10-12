@@ -51,11 +51,11 @@ const original=q.trim();if(geoCache.has(original))return geoCache.get(original);
 // CEP junto ao endereço pode impedir a busca livre; mantenha rua e número.
 const cleaned=original.replace(/\b\d{5}-?\d{3}\b/g,'').replace(/,\s*,/g,',').replace(/[,\s]+$/,'').trim();
 const queries=[...new Set([original,cleaned].filter(Boolean))];
-for(const query of queries){const data=await requestJSON('https://photon.komoot.io/api/?'+new URLSearchParams({q:query,limit:'5'}));const features=(data.features||[]).filter(f=>Array.isArray(f.geometry?.coordinates)&&f.geometry.coordinates.length===2&&f.geometry.coordinates.every(Number.isFinite));if(features.length){geoCache.set(original,features);return features;}}
+for(const query of queries){const data=await requestJSON('https://photon.komoot.io/api/?'+new URLSearchParams({q:query,limit:'5'}));const features=(data.features||[]).filter(f=>Array.isArray(f.geometry?.coordinates)&&f.geometry.coordinates.length===2&&f.geometry.coordinates.every(Number.isFinite));if(features.length){features.sort((a,b)=>(a.properties?.type==='state'?1:0)-(b.properties?.type==='state'?1:0));geoCache.set(original,features);return features;}}
 throw new Error('Nenhum local encontrado para “'+original+'”. Tente rua, número, cidade e país; confira também a grafia.');
 }
 function searchError(e){if(e.name==='AbortError')return 'O serviço de mapas demorou demais para responder. Tente novamente mais tarde.';if(e instanceof TypeError)return 'O navegador não conseguiu acessar o serviço de mapas. Pode ser bloqueio da prévia, da rede ou indisponibilidade do serviço. Baixe o HTML e abra diretamente no Safari/Chrome, ou teste a página publicada no GitHub Pages.';return e.message||'Falha na consulta ao serviço de mapas.';}
-function placeLabel(f){const p=f.properties;return [...new Set([p.name,p.street,p.housenumber,p.district,p.city,p.state,p.postcode,p.country].filter(Boolean))].join(', ');}
+function placeLabel(f){const p=f.properties;const kind=({state:'Estado',city:'Cidade',district:'Bairro',street:'Rua',house:'Endereço'})[p.type]||'Local';return kind+': '+[p.name,p.street,p.housenumber,p.district,p.city,p.state,p.postcode,p.country].filter(Boolean).join(', ');}
 function populate(id,list){$(id).replaceChildren();list.forEach((f,i)=>{const option=document.createElement('option');option.value=String(i);option.textContent=placeLabel(f);$(id).appendChild(option);});}
 function openDetails(message){$('details').hidden=false;$('applyAddresses').setAttribute('aria-expanded','true');$('addressStatus').textContent=message;invalidate();$('distance').focus();}
 async function applyAddresses(){
